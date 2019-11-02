@@ -190,11 +190,11 @@ consolidado <- consolidado[-c(which(consolidado$Year=="Year")),]
 # El nombre de las columnas trae caracteres HTML que pueden ser molestos, así que
 # eliminémoslos
 nom_columnas <- consolidado %>% 
-  colnames() %>%
-  str_remove_all("[\n]") %>% 
-  str_trim(side = "both") %>%
-  str_squish() %>% 
-  str_replace_all("[ ]", ".")
+  colnames() %>%              # capturo los nombres de las columnas
+  str_remove_all("[\n]") %>%  # elimino los espaciados de HTML
+  str_trim(side = "both") %>% # elimino los espacios externos
+  str_squish() %>%            # elimino los espacios excesivos intermedios
+  str_replace_all("[ ]", ".") # reemplazo los espacios simples con un punto
 
 # una vez limpios, los volvemos a poner en su lugar
 colnames(consolidado) <- nom_columnas
@@ -226,7 +226,71 @@ consolidado$First.Grid.Connection <- consolidado$First.Grid.Connection %>%
 
 # =========================== ZONA DE ANÁLISIS ========================
 
-# CONTINUARÁ......
+library(osmar);library(prettymapr)
+library(geonames)
+options(geonamesUsername="aca su nombre usuario de geonames")
+# Reimportar (por si acaso)
+# consolidado <- read.csv("data_nuclear.csv", sep = ";")
+
+
+# usar las función de búsqueda de geonames, para identificar las coordenadas
+# de la ciudad donde se ubica la planta. Dado que es una API, debe consumirse
+# con mesura, así que usaremos un loop, que las almacene en una tabla auxiliar
+# crearemos con códigos y todo
+
+# tabla auxiliar
+locaciones <- consolidado %>% 
+  select(pais, Location) %>%
+  distinct(pais, Location)
+
+# importar tabla con códigos de nombre del país
+ctry_codes <- read.csv("ctry name codes.csv", sep = ";")
+
+# hacemos una fusión de tablas vía join
+locaciones <- locaciones %>% 
+  left_join(ctry_codes, by = "pais")
+
+# generamos el loop
+for (i in 1:nrow(locaciones)) {
+  
+  # imprimo algunos mensajes de ayuda
+  print(paste("capturando", locaciones$Location[i], "de",
+              locaciones$alpha.2[i], "loop Nº",i))
+  
+  # capturo logintud
+  lng <- GNsearch(q= locaciones$Location[i],
+                  country = locaciones$alpha.2[i])[1,2]
+  
+  # hago espacio entre consultas, para no recargar la API
+  Sys.sleep(1)
+  
+  # capturo latitud
+  lat <- GNsearch(q= locaciones$Location[i],
+                  country = locaciones$alpha.2[i])[1,15]
+  
+  print(paste("lon:", lng, "- lat:", lat))
+  
+  # como consume una API de búsquedas inciertas, es bueno usar
+  # un control de excepciones
+  tryCatch({
+    # asigno a tabla auxiliar
+    locaciones$lng[i] <- lng
+    locaciones$lat[i] <- lat
+  },
+    error = function(e){
+      # damos mensaje de error
+      print("no se encontró esa ciudad")
+      
+      # si hay error, les arrojo NA, después las puede editar manualmente
+      locaciones$lng[i] <- NA
+      locaciones$lat[i] <- NA
+    }
+  )
+  
+  rm(lng, lat)
+  Sys.sleep(.5)
+}# fin del loop
+
 
 
 
