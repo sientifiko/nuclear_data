@@ -1,5 +1,5 @@
 library(RSelenium); library(tidyverse); library(rvest)
-options(scipen = 0)
+
 # ==================== ZONA DE SETEO DE VARIABLES INICIALES ====================
 
 # seteo en link inician
