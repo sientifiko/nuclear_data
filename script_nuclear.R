@@ -1,5 +1,5 @@
 library(RSelenium); library(tidyverse); library(rvest)
-
+options(scipen = 0)
 # ==================== ZONA DE SETEO DE VARIABLES INICIALES ====================
 
 # seteo en link inician
@@ -226,9 +226,13 @@ consolidado$First.Grid.Connection <- consolidado$First.Grid.Connection %>%
 
 # =========================== ZONA DE ANÁLISIS ========================
 
+# EN CONSTRUCCIÓN.... IGNORAR POR AHORA
+
+
 library(osmar);library(prettymapr)
 library(geonames)
-options(geonamesUsername="aca su nombre usuario de geonames")
+options(geonamesUsername="sientifiko")
+options(geonamesHost="ws5.geonames.org")
 # Reimportar (por si acaso)
 # consolidado <- read.csv("data_nuclear.csv", sep = ";")
 
@@ -250,6 +254,11 @@ ctry_codes <- read.csv("ctry name codes.csv", sep = ";")
 locaciones <- locaciones %>% 
   left_join(ctry_codes, by = "pais")
 
+
+#inicio estas nuevas columnas con valores nulos
+locaciones$lng <- NA
+locaciones$lat <- NA
+
 # generamos el loop
 for (i in 1:nrow(locaciones)) {
   
@@ -262,7 +271,7 @@ for (i in 1:nrow(locaciones)) {
                   country = locaciones$alpha.2[i])[1,2]
   
   # hago espacio entre consultas, para no recargar la API
-  Sys.sleep(1)
+  # Sys.sleep(1)
   
   # capturo latitud
   lat <- GNsearch(q= locaciones$Location[i],
@@ -280,16 +289,27 @@ for (i in 1:nrow(locaciones)) {
     error = function(e){
       # damos mensaje de error
       print("no se encontró esa ciudad")
-      
-      # si hay error, les arrojo NA, después las puede editar manualmente
-      locaciones$lng[i] <- NA
-      locaciones$lat[i] <- NA
     }
   )
   
   rm(lng, lat)
-  Sys.sleep(.5)
+  # Sys.sleep(.5)
+  # closeAllConnections()
 }# fin del loop
+
+# exportamos este archivo por si acaso
+write.table(locaciones,"locaciones.txt", sep = ";", row.names = F)
+
+# y bueno, nada es perfecto, y varias locaciones no están, pero es un numero
+# más manejable, 14 en total, que podemos buscar manualmente
+locaciones$lat %>% is.na() %>% which() 
+
+locaciones[locaciones$lat %>% is.na() %>% which() ,]
+
+localidad = c("TOWN OF NEWCASTLE", "SHENZHEN CITY", "Tirunellveli-Kattabomman",
+              "TRINO VERCELLESE", "")
+lats <- c(43.917470,22.554319, 8.728790, 45.213530)
+longs <- c(-78.588830,114.120178, 77.704580, 8.489040)
 
 
 
